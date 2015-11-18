@@ -20,14 +20,14 @@ exports.wrap = function (thing) {
 
 function initCheck(notMode) {
     var checkMethods = {
-        containsKeys: checkContainsKeys.bind(this),
-        hasKeys: checkHasKeys.bind(this),
-        containsValues: checkContainsValues.bind(this),
-        hasValues: checkHasValues.bind(this),
-        hasValueType: checkHasValueType.bind(this),
-        hasLength: checkHasLength.bind(this),
-        hasParamsCount: checkHasParamsCount.bind(this),
-        hasWordsCount: checkHasWordsCount.bind(this)
+        containsKeys: getFuncResult(checkContainsKeys, notMode).bind(this),
+        hasKeys: getFuncResult(checkHasKeys, notMode).bind(this),
+        containsValues: getFuncResult(checkContainsValues, notMode).bind(this),
+        hasValues: getFuncResult(checkHasValues, notMode).bind(this),
+        hasValueType: getFuncResult(checkHasValueType, notMode).bind(this),
+        hasLength: getFuncResult(checkHasLength, notMode).bind(this),
+        hasParamsCount: getFuncResult(checkHasParamsCount, notMode).bind(this),
+        hasWordsCount: getFuncResult(checkHasWordsCount, notMode).bind(this)
     };
     return checkMethods;
 }
@@ -113,4 +113,11 @@ function getValues() {
     return Object.keys(this).map(function (key) {
         return this[key];
     }, this);
+}
+
+function getFuncResult(func, notMode) {
+    return function () {
+        var result = func.apply(this, arguments);
+        return notMode ? !result : result;
+    };
 }
