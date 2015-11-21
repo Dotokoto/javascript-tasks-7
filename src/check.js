@@ -3,7 +3,14 @@
 exports.init = function () {
     Object.defineProperty(Object.prototype, 'check', {
         get: function () {
-            return initCheck.call(this, false);
+            var testObject = this;
+            var tests = initCheck.call(this, false);
+            Object.defineProperty(res, 'not', {
+                get: function () {
+                    return initCheck.call(testObject, true);
+                }
+            });
+            return tests;
         }
     });
 };
@@ -19,7 +26,7 @@ exports.wrap = function (thing) {
 };
 
 function initCheck(notMode) {
-    var checkMethods = {
+    return {
         containsKeys: getFuncResult(checkContainsKeys, notMode).bind(this),
         hasKeys: getFuncResult(checkHasKeys, notMode).bind(this),
         containsValues: getFuncResult(checkContainsValues, notMode).bind(this),
@@ -29,7 +36,6 @@ function initCheck(notMode) {
         hasParamsCount: getFuncResult(checkHasParamsCount, notMode).bind(this),
         hasWordsCount: getFuncResult(checkHasWordsCount, notMode).bind(this)
     };
-    return checkMethods;
 }
 
 function checkContainsKeys(keys) {
@@ -47,6 +53,9 @@ function checkHasKeys(keys) {
 }
 
 function checkContainsValues(values) {
+    if (!checkType.call(this, [Array, Object])) {
+        return undefined;
+    }
     var thisValues = getValues.call(this);
     return values.every(function (value) {
         return thisValues.indexOf(value) > -1;
@@ -79,7 +88,7 @@ function checkHasValueType(key, type) {
 }
 
 function checkHasLength(length) {
-    if (!checkType.call(this, [Array, Object])) {
+    if (!checkType.call(this, [Array, String])) {
         return undefined;
     }
     return (this.length === length);
@@ -117,7 +126,6 @@ function getValues() {
 
 function getFuncResult(func, notMode) {
     return function () {
-        var result = func.apply(this, arguments);
-        return notMode ? !result : result;
+        return notMode ? !func.apply(this, arguments) : func.apply(this, arguments);
     };
 }
