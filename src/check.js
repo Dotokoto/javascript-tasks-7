@@ -3,38 +3,39 @@
 exports.init = function () {
     Object.defineProperty(Object.prototype, 'check', {
         get: function () {
-            var testObject = this;
-            var tests = initCheck.call(this, false);
-            Object.defineProperty(res, 'not', {
-                get: function () {
-                    return initCheck.call(testObject, true);
-                }
-            });
+            var tests = initCheck.call(this);
+            tests.not = Object.keys(tests).reduce(function (prev, key) {
+                prev[key] = function () {
+                    return !tests[key].apply(this, arguments);
+                };
+                return prev;
+            }, {});
             return tests;
         }
     });
 };
 
 exports.wrap = function (thing) {
-    if (thing !== null) {
+    if (thing !== null && thing !== undefined) {
         return thing;
     }
     var wrappedNull = {};
     wrappedNull.isNull = function () {
         return true;
     };
+    return wrappedNull;
 };
 
-function initCheck(notMode) {
+function initCheck() {
     return {
-        containsKeys: getFuncResult(checkContainsKeys, notMode).bind(this),
-        hasKeys: getFuncResult(checkHasKeys, notMode).bind(this),
-        containsValues: getFuncResult(checkContainsValues, notMode).bind(this),
-        hasValues: getFuncResult(checkHasValues, notMode).bind(this),
-        hasValueType: getFuncResult(checkHasValueType, notMode).bind(this),
-        hasLength: getFuncResult(checkHasLength, notMode).bind(this),
-        hasParamsCount: getFuncResult(checkHasParamsCount, notMode).bind(this),
-        hasWordsCount: getFuncResult(checkHasWordsCount, notMode).bind(this)
+        containsKeys: checkContainsKeys.bind(this),
+        hasKeys: checkHasKeys.bind(this),
+        containsValues: checkContainsValues.bind(this),
+        hasValues: checkHasValues.bind(this),
+        hasValueType: checkHasValueType.bind(this),
+        hasLength: checkHasLength.bind(this),
+        hasParamsCount: checkHasParamsCount.bind(this),
+        hasWordsCount: checkHasWordsCount.bind(this)
     };
 }
 
@@ -71,20 +72,16 @@ function checkHasValueType(key, type) {
     if (!checkType.call(this, [Array, Object])) {
         return undefined;
     }
-    var valueTypes = [String, Number, Function, Array];
-    var goodType = false;
-    for (var i = 0; i < valueTypes.length; i++) {
-        if (valueTypes[i].prototype === type.prototype) {
-            goodType = true;
-        }
-    }
-    if (!goodType) {
-        return false;
-    }
     if (!this.hasOwnProperty(key)) {
         return false;
     }
-    return (this[key] === type(this[key]));
+    var valueTypes = [String, Number, Function, Array];
+    if (!valueTypes.some(function (value) {
+        return value.prototype === type.prototype;
+    })) {
+        return false;
+    }
+    return this[key] === type(this[key]);
 }
 
 function checkHasLength(length) {
@@ -106,26 +103,20 @@ function checkHasWordsCount(count) {
         return undefined;
     }
     var words = this.split(/\s+/);
-    return (words.length === count);
+    words = words.filter(function (item) {
+        return item.length;
+    });
+    return words.length === count;
 }
 
 function checkType(types) {
-    for (var i = 0; i < types.length; i++) {
-        if (Object.getPrototypeOf(this) === types[i].prototype) {
-            return true;
-        }
-    }
-    return false;
+    return types.some(function (item) {
+        return Object.getPrototypeOf(this) === item.prototype;
+    }, this);
 }
 
 function getValues() {
     return Object.keys(this).map(function (key) {
         return this[key];
     }, this);
-}
-
-function getFuncResult(func, notMode) {
-    return function () {
-        return notMode ? !func.apply(this, arguments) : func.apply(this, arguments);
-    };
 }
